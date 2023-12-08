@@ -67,7 +67,7 @@ jobs:
         with:
           test-results: test_results.json
 
-  build:
+  builds:
     runs-on: ubuntu-latest
     needs: tests
     strategy:
@@ -75,7 +75,6 @@ jobs:
       matrix:
         goarch: ["arm64", "amd64"]
     timeout-minutes: 5
-    name: Build for ${{ matrix.goarch }}
     steps:
       - uses: actions/setup-go@v4
         with:
