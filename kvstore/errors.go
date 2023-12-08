@@ -5,14 +5,14 @@ import (
 )
 
 var (
-	// ErrKeyNotFound is returned when a key is not found
-	ErrKeyNotFound = errors.New("key not found")
-	// ErrEmptyStoreKey is returned when attempting to use an empty key
-	ErrEmptyStoreKey = errors.New("empty store key")
-	// ErrInvalidIterDirections is returned when an invalid number of
+	// ErrKVStoreKeyNotFound is returned when a key is not found
+	ErrKVStoreKeyNotFound = errors.New("key not found")
+	// ErrKVStoreEmptyStoreKey is returned when attempting to use an empty key
+	ErrKVStoreEmptyStoreKey = errors.New("empty store key")
+	// ErrKVStoreInvalidIterDirections is returned when an invalid number of
 	// iteration directions are provided to the Iterate functions
-	ErrInvalidIterDirections = errors.New("invalid number of iteration directions")
-	// ErrUnknownIterDirection is returned when an unknown iteration
+	ErrKVStoreInvalidIterDirections = errors.New("invalid number of iteration directions")
+	// ErrKVStoreUnknownIterDirection is returned when an unknown iteration
 	// direction is provided to the Iterate functions
-	ErrUnknownIterDirection = errors.New("unknown iteration direction")
+	ErrKVStoreUnknownIterDirection = errors.New("unknown iteration direction")
 )
