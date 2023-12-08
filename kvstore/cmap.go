@@ -16,7 +16,7 @@ type cmap struct {
 	m  map[string]Value
 }
 
-// NewKVStore creates a new instace of the KVStore interface.
+// NewKVStore creates a new instance of the KVStore interface.
 func NewKVStore() KVStore {
 	return &cmap{
 		mu: sync.RWMutex{},
@@ -144,8 +144,9 @@ func (c *cmap) Iterate(
 		}
 	}
 	c.mu.RUnlock()
-	slices.Sort(keys)
 	switch iterDir {
+	case IterDirectionForward:
+		slices.Sort(keys)
 	case IterDirectionReverse:
 		slices.Reverse(keys)
 	}
@@ -184,6 +185,8 @@ func (c *cmap) IterateKeys(
 	c.mu.RUnlock()
 	slices.Sort(keys)
 	switch iterDir {
+	case IterDirectionForward:
+		slices.Sort(keys)
 	case IterDirectionReverse:
 		slices.Reverse(keys)
 	}

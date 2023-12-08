@@ -41,4 +41,12 @@ go_docs: check_godoc ## Generate documentation for the project
 
 .PHONY: test_all
 test_all:  ## runs the test suite
-	go test -v -p 1 ./ -mod=readonly -race
+	go test -p 1 ./... -mod=readonly -race
+
+.PHONY: test_all_clean
+test_all_clean:  ## runs the test suite after cleaning the test cache
+	go clean -testcache && go test -v -p 1 ./... -mod=readonly -race
+
+.PHONY: test_all_verbose
+test_all_verbose:  ## runs the test suite with verbose output
+	go test -v -p 1 ./... -mod=readonly -race
