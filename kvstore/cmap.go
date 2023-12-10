@@ -27,14 +27,14 @@ func NewKVStore() KVStore {
 // Get returns the value associated with the given key.
 func (c *cmap) Get(key Key) (Value, error) {
 	if len(key) == 0 {
-		return nil, ErrKVStoreEmptyStoreKey
+		return nil, ErrEmptyStoreKey
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	if v, ok := c.m[string(key)]; ok {
 		return v, nil
 	}
-	return nil, ErrKVStoreKeyNotFound
+	return nil, ErrKeyNotFound
 }
 
 // GetAll returns all keys and values in the store.
@@ -66,7 +66,7 @@ func (c *cmap) GetPrefix(prefix KeyPrefix) []Value {
 // Has checks whether the given key exists in the store or not.
 func (c *cmap) Has(key Key) (bool, error) {
 	if len(key) == 0 {
-		return false, ErrKVStoreEmptyStoreKey
+		return false, ErrEmptyStoreKey
 	}
 	c.mu.RLock()
 	defer c.mu.RUnlock()
@@ -77,7 +77,7 @@ func (c *cmap) Has(key Key) (bool, error) {
 // Set sets/updates the value associated with the given key in the store.
 func (c *cmap) Set(key Key, value Value) error {
 	if len(key) == 0 {
-		return ErrKVStoreEmptyStoreKey
+		return ErrEmptyStoreKey
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -88,7 +88,7 @@ func (c *cmap) Set(key Key, value Value) error {
 // Delete deletes the given key from the store.
 func (c *cmap) Delete(key Key) error {
 	if len(key) == 0 {
-		return ErrKVStoreEmptyStoreKey
+		return ErrEmptyStoreKey
 	}
 	c.mu.Lock()
 	defer c.mu.Unlock()
@@ -97,7 +97,7 @@ func (c *cmap) Delete(key Key) error {
 		delete(c.m, k)
 		return nil
 	}
-	return ErrKVStoreKeyNotFound
+	return ErrKeyNotFound
 }
 
 // DeletePrefix deletes all keys with the given prefix from the store.
@@ -242,7 +242,7 @@ func getIterDirection(direction ...IterDirection) (IterDirection, error) {
 	if len(direction) == 0 {
 		return IterDirectionForward, nil
 	} else if len(direction) > 1 {
-		return IterDirectionForward, ErrKVStoreInvalidIterDirections
+		return IterDirectionForward, ErrInvalidIterDirections
 	}
 	switch direction[0] {
 	case IterDirectionForward:
@@ -250,6 +250,6 @@ func getIterDirection(direction ...IterDirection) (IterDirection, error) {
 	case IterDirectionReverse:
 		return IterDirectionReverse, nil
 	default:
-		return IterDirectionForward, ErrKVStoreUnknownIterDirection
+		return IterDirectionForward, ErrUnknownIterDirection
 	}
 }

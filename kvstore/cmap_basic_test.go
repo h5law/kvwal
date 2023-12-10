@@ -45,7 +45,7 @@ func TestKVStore_Get(t *testing.T) {
 			},
 			key:           []byte("key5"),
 			expectedValue: nil,
-			expectedErr:   kvstore.ErrKVStoreKeyNotFound,
+			expectedErr:   kvstore.ErrKeyNotFound,
 		},
 		{
 			desc: "failure: key length zero",
@@ -57,7 +57,7 @@ func TestKVStore_Get(t *testing.T) {
 			},
 			key:           nil,
 			expectedValue: nil,
-			expectedErr:   kvstore.ErrKVStoreEmptyStoreKey,
+			expectedErr:   kvstore.ErrEmptyStoreKey,
 		},
 	}
 	for _, tt := range tests {
@@ -227,7 +227,7 @@ func TestKVStore_Has(t *testing.T) {
 			},
 			key:         nil,
 			expectedHas: false,
-			expectedErr: kvstore.ErrKVStoreEmptyStoreKey,
+			expectedErr: kvstore.ErrEmptyStoreKey,
 		},
 	}
 	for _, tt := range tests {
@@ -288,7 +288,7 @@ func TestKVStore_Set(t *testing.T) {
 				{key: nil, value: []byte("value1")},
 			},
 			expectedLen: 0,
-			expectedErr: kvstore.ErrKVStoreEmptyStoreKey,
+			expectedErr: kvstore.ErrEmptyStoreKey,
 		},
 	}
 	for _, tt := range tests {
@@ -340,7 +340,7 @@ func TestKVStore_Delete(t *testing.T) {
 			},
 			key:         []byte("key5"),
 			expectedLen: 4,
-			expectedErr: kvstore.ErrKVStoreKeyNotFound,
+			expectedErr: kvstore.ErrKeyNotFound,
 		},
 		{
 			desc: "failure: key length zero",
@@ -352,7 +352,7 @@ func TestKVStore_Delete(t *testing.T) {
 			},
 			key:         nil,
 			expectedLen: 4,
-			expectedErr: kvstore.ErrKVStoreEmptyStoreKey,
+			expectedErr: kvstore.ErrEmptyStoreKey,
 		},
 	}
 	for _, tt := range tests {
@@ -555,7 +555,7 @@ func TestKVStore_Iterate(t *testing.T) {
 			iterDirection:        []kvstore.IterDirection{kvstore.IterDirection(3)},
 			expectedConsumedLen:  0,
 			expectedConsumedList: []*kvPairs{},
-			expectedErr:          kvstore.ErrKVStoreUnknownIterDirection,
+			expectedErr:          kvstore.ErrUnknownIterDirection,
 		},
 		{
 			desc: "failure: too many iteration directions",
@@ -574,7 +574,7 @@ func TestKVStore_Iterate(t *testing.T) {
 			},
 			expectedConsumedLen:  0,
 			expectedConsumedList: []*kvPairs{},
-			expectedErr:          kvstore.ErrKVStoreInvalidIterDirections,
+			expectedErr:          kvstore.ErrInvalidIterDirections,
 		},
 	}
 	for _, tt := range tests {
@@ -718,7 +718,7 @@ func TestKVStore_IterateKeys(t *testing.T) {
 			iterDirection:        []kvstore.IterDirection{kvstore.IterDirection(3)},
 			expectedConsumedLen:  0,
 			expectedConsumedList: []kvstore.Key{},
-			expectedErr:          kvstore.ErrKVStoreUnknownIterDirection,
+			expectedErr:          kvstore.ErrUnknownIterDirection,
 		},
 		{
 			desc: "failure: too many iteration directions",
@@ -737,7 +737,7 @@ func TestKVStore_IterateKeys(t *testing.T) {
 			},
 			expectedConsumedLen:  0,
 			expectedConsumedList: []kvstore.Key{},
-			expectedErr:          kvstore.ErrKVStoreInvalidIterDirections,
+			expectedErr:          kvstore.ErrInvalidIterDirections,
 		},
 	}
 	for _, tt := range tests {
