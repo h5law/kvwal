@@ -8,22 +8,17 @@
 ## Summary
 
 <!-- DELETE THIS COMMENT BLOCK
-      - Provide a quick summary of the changes yourself
-      - Let reviewpad summarise your PR under AI summary
-      - You can leave a `/reviewpad summarise` comment at any time to trigger it manually.
+  - Provide a quick summary of the changes yourself
 -->
-
-### Human Summary
-
-### AI Summary
-
-reviewpad:summary
 
 ## Issue
 
 Fixes #\<issue_number>
 
-\[Explain the reasoning for the PR in 1-2 sentences. Consider adding a link or a screenshot.\]
+<!-- DELETE THIS COMMENT BLOCK
+  - Explain the reasoning for the PR in 1-2 sentences.
+  - Consider adding a link or a screenshot.\]
+-->
 
 ## Type of change
 

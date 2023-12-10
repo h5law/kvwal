@@ -1,6 +1,6 @@
 ---
 name: Issue
-about: General purpose issue for the kvWal libarary
+about: General purpose issue for the kvwal library
 title: "[REPLACE ME] With a descriptive title"
 labels: ""
 assignees: ""
