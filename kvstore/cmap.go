@@ -50,9 +50,8 @@ func (c *cmap) GetAll() ([]Key, []Value) {
 	return keys, values
 }
 
-// GetPrefix returns all keys in the store with the given prefix
-// To retrieve all keys in the store, pass in an a nil prefix.
-func (c *cmap) GetPrefix(prefix KeyPrefix) ([]Value, error) {
+// GetPrefix returns all values in the store who's key has the given prefix.
+func (c *cmap) GetPrefix(prefix KeyPrefix) []Value {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	values := make([]Value, 0, len(c.m))
@@ -61,7 +60,7 @@ func (c *cmap) GetPrefix(prefix KeyPrefix) ([]Value, error) {
 			values = append(values, v)
 		}
 	}
-	return values, nil
+	return values
 }
 
 // Has checks whether the given key exists in the store or not.
@@ -103,21 +102,19 @@ func (c *cmap) Delete(key Key) error {
 
 // DeletePrefix deletes all keys with the given prefix from the store.
 // To delete all keys from the store, pass in a nil prefix.
-func (c *cmap) DeletePrefix(prefix KeyPrefix) error {
+func (c *cmap) DeletePrefix(prefix KeyPrefix) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	maps.DeleteFunc(c.m, func(key string, _ Value) bool {
 		return bytes.HasPrefix([]byte(key), prefix)
 	})
-	return nil
 }
 
 // ClearAll deletes all key-value pairs from the store.
-func (c *cmap) ClearAll() error {
+func (c *cmap) ClearAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.m = make(map[string]Value)
-	return nil
 }
 
 // Iterate iterates over all key-value pairs in the store with the
@@ -144,17 +141,15 @@ func (c *cmap) Iterate(
 		}
 	}
 	c.mu.RUnlock()
-	switch iterDir {
-	case IterDirectionForward:
-		slices.Sort(keys)
-	case IterDirectionReverse:
+	slices.Sort(keys)
+	if iterDir == IterDirectionReverse {
 		slices.Reverse(keys)
 	}
 	for _, k := range keys {
 		key := bytes.Clone([]byte(k)) // Copy the key
 		value := bytes.Clone(c.m[k])  // Copy the value
 		if !consumer(key, value) {
-			break
+			return nil
 		}
 	}
 	return nil
@@ -184,15 +179,12 @@ func (c *cmap) IterateKeys(
 	}
 	c.mu.RUnlock()
 	slices.Sort(keys)
-	switch iterDir {
-	case IterDirectionForward:
-		slices.Sort(keys)
-	case IterDirectionReverse:
+	if iterDir == IterDirectionReverse {
 		slices.Reverse(keys)
 	}
 	for _, k := range keys {
 		if !consumer(bytes.Clone([]byte(k))) {
-			break
+			return nil
 		}
 	}
 	return nil

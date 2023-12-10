@@ -39,8 +39,8 @@ type KVStore interface {
 	Get(key Key) (Value, error)
 	// GetAll retrieves all keys and values from the store
 	GetAll() ([]Key, []Value)
-	// GetPrefix retrieves all keys with the given prefix
-	GetPrefix(prefix KeyPrefix) ([]Value, error)
+	// GetPrefix retrieves all the values who's key has the given prefix
+	GetPrefix(prefix KeyPrefix) []Value
 	// Has checks whether the key exists in the store
 	Has(key Key) (bool, error)
 
@@ -50,10 +50,10 @@ type KVStore interface {
 	Set(key Key, val Value) error
 	// Delete removes a key-value pair from the store
 	Delete(key Key) error
-	// DeletePrefix removes all key-value pairs with the given prefix
-	DeletePrefix(prefix KeyPrefix) error
+	// DeletePrefix removes all key-value pairs with the given key prefix
+	DeletePrefix(prefix KeyPrefix)
 	// ClearAll removes all key-value pairs from the store
-	ClearAll() error
+	ClearAll()
 
 	// --- Iteration ---
 
