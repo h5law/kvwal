@@ -13,14 +13,14 @@ var _ KVStore = (*cmap)(nil)
 // Using a RWMutex around the map we can ensure the map is concurrency safe.
 type cmap struct {
 	mu sync.RWMutex
-	m  map[string][]byte
+	m  map[string]Value
 }
 
-// NewKVStore creates a new instace of the KVStore interface.
+// NewKVStore creates a new instance of the KVStore interface.
 func NewKVStore() KVStore {
 	return &cmap{
 		mu: sync.RWMutex{},
-		m:  make(map[string][]byte),
+		m:  make(map[string]Value),
 	}
 }
 
@@ -37,9 +37,21 @@ func (c *cmap) Get(key Key) (Value, error) {
 	return nil, ErrKeyNotFound
 }
 
-// GetPrefix returns all keys in the store with the given prefix
-// To retrieve all keys in the store, pass in an a nil prefix.
-func (c *cmap) GetPrefix(prefix Key) ([]Value, error) {
+// GetAll returns all keys and values in the store.
+func (c *cmap) GetAll() ([]Key, []Value) {
+	c.mu.RLock()
+	defer c.mu.RUnlock()
+	keys := make([]Key, 0, len(c.m))
+	values := make([]Value, 0, len(c.m))
+	for k, v := range c.m {
+		keys = append(keys, []byte(k))
+		values = append(values, v)
+	}
+	return keys, values
+}
+
+// GetPrefix returns all values in the store who's key has the given prefix.
+func (c *cmap) GetPrefix(prefix KeyPrefix) []Value {
 	c.mu.RLock()
 	defer c.mu.RUnlock()
 	values := make([]Value, 0, len(c.m))
@@ -48,7 +60,7 @@ func (c *cmap) GetPrefix(prefix Key) ([]Value, error) {
 			values = append(values, v)
 		}
 	}
-	return values, nil
+	return values
 }
 
 // Has checks whether the given key exists in the store or not.
@@ -90,21 +102,19 @@ func (c *cmap) Delete(key Key) error {
 
 // DeletePrefix deletes all keys with the given prefix from the store.
 // To delete all keys from the store, pass in a nil prefix.
-func (c *cmap) DeletePrefix(prefix Key) error {
+func (c *cmap) DeletePrefix(prefix KeyPrefix) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	maps.DeleteFunc(c.m, func(key string, _ []byte) bool {
+	maps.DeleteFunc(c.m, func(key string, _ Value) bool {
 		return bytes.HasPrefix([]byte(key), prefix)
 	})
-	return nil
 }
 
 // ClearAll deletes all key-value pairs from the store.
-func (c *cmap) ClearAll() error {
+func (c *cmap) ClearAll() {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.m = make(map[string][]byte)
-	return nil
+	c.m = make(map[string]Value)
 }
 
 // Iterate iterates over all key-value pairs in the store with the
@@ -112,10 +122,10 @@ func (c *cmap) ClearAll() error {
 // specified), and invokes the provided consumer function on each
 // key-value pair. If the consumer function returns false, then the
 // iteration is stopped.
-// The consumer function is invoked with a copy of the key and value.
+// The consumer function is invoked with a copy of the key and value
 // and does not mutate the store.
 func (c *cmap) Iterate(
-	prefix Key,
+	prefix KeyPrefix,
 	consumer IteratorConsumerFn,
 	direction ...IterDirection,
 ) (err error) {
@@ -132,14 +142,14 @@ func (c *cmap) Iterate(
 	}
 	c.mu.RUnlock()
 	slices.Sort(keys)
-	switch iterDir {
-	case IterDirectionReverse:
+	if iterDir == IterDirectionReverse {
 		slices.Reverse(keys)
 	}
 	for _, k := range keys {
-		v := bytes.Clone(c.m[k])
-		if !consumer(bytes.Clone([]byte(k)), v) {
-			break
+		key := bytes.Clone([]byte(k)) // Copy the key
+		value := bytes.Clone(c.m[k])  // Copy the value
+		if !consumer(key, value) {
+			return nil
 		}
 	}
 	return nil
@@ -152,7 +162,7 @@ func (c *cmap) Iterate(
 // The consumer function is invoked with a copy of the key, and does
 // not mutate the store.
 func (c *cmap) IterateKeys(
-	prefix Key,
+	prefix KeyPrefix,
 	consumer IteratorKeysConsumerFn,
 	direction ...IterDirection,
 ) (err error) {
@@ -169,13 +179,12 @@ func (c *cmap) IterateKeys(
 	}
 	c.mu.RUnlock()
 	slices.Sort(keys)
-	switch iterDir {
-	case IterDirectionReverse:
+	if iterDir == IterDirectionReverse {
 		slices.Reverse(keys)
 	}
 	for _, k := range keys {
 		if !consumer(bytes.Clone([]byte(k))) {
-			break
+			return nil
 		}
 	}
 	return nil
@@ -197,6 +206,31 @@ func (c *cmap) Clone() KVStore {
 		mu: sync.RWMutex{},
 		m:  newMap,
 	}
+}
+
+// Equal returns true if the provided store is equal to the current store,
+// by using an iterator to compare the key-value pairs in both stores.
+func (c *cmap) Equal(other KVStore) (bool, error) {
+	c.mu.RLock()
+	selfKeys, selfValues := c.GetAll()
+	c.mu.RUnlock()
+	otherKeys, otherValues := other.GetAll()
+	if len(selfKeys) != len(otherKeys) || len(selfValues) != len(otherValues) {
+		return false, nil
+	}
+	eq := true
+	if err := other.Iterate(nil, func(key Key, value Value) bool {
+		c.mu.RLock()
+		defer c.mu.RUnlock()
+		if v, ok := c.m[string(key)]; !ok || !bytes.Equal(v, value) {
+			eq = false
+			return false
+		}
+		return true
+	}); err != nil {
+		return false, err
+	}
+	return eq, nil
 }
 
 // getIterDirection returns the iteration direction from the provided spead
