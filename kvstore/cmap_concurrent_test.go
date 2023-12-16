@@ -14,8 +14,149 @@ import (
 	"github.com/h5law/kvwal/kvstore"
 )
 
-// TODO: Increase coverage of the KVStore interface methods using concurrent
-// behaviour. Currently, only the Get, Set, and Delete methods are tested.
+func TestKVStore_Concurrency_StressGetAndSet(t *testing.T) {
+	kv := kvstore.NewKVStore()
+	var wg sync.WaitGroup
+	numGoroutines := 100 // High number for stress testing
+
+	// Concurrently writing different keys
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			key := fmt.Sprintf("key%d", i)
+			value := fmt.Sprintf("value%d", i)
+			require.NoError(t, kv.Set([]byte(key), []byte(value)))
+		}(i)
+	}
+
+	// Concurrently reading and verifying keys
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			key := fmt.Sprintf("key%d", i)
+			expectedValue := fmt.Sprintf("value%d", i)
+			value, err := kv.Get([]byte(key))
+			require.NoError(t, err)
+			require.Equal(t, kvstore.Value(expectedValue), value)
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+func TestKVStore_Concurrent_MultipleDeletes(t *testing.T) {
+	kv := kvstore.NewKVStore()
+	require.NoError(t, kv.Set([]byte("key"), []byte("value")))
+
+	var wg sync.WaitGroup
+	numGoroutines := 10
+
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			err := kv.Delete([]byte("key"))
+			if err != nil {
+				require.Equal(t, kvstore.ErrKeyNotFound, err)
+			} else {
+				require.NoError(t, err)
+			}
+		}()
+	}
+
+	wg.Wait()
+	_, err := kv.Get([]byte("key"))
+	require.Equal(t, kvstore.ErrKeyNotFound, err)
+}
+
+func TestKVStore_Concurrent_RandomizedOperations(t *testing.T) {
+	kv := kvstore.NewKVStore()
+	var wg sync.WaitGroup
+	operations := 1000 // Number of operations
+
+	for i := 0; i < operations; i++ {
+		wg.Add(1)
+		go func(i int) {
+			defer wg.Done()
+			operation := rand.Intn(3)                   // Randomly choose between Get, Set, Delete
+			key := fmt.Sprintf("key%d", rand.Intn(100)) // Random key selection
+
+			switch operation {
+			case 0: // Get
+				_, err := kv.Get([]byte(key)) // nolint:errcheck
+				if err != nil {
+					require.Equal(t, kvstore.ErrKeyNotFound, err)
+				} else {
+					require.NoError(t, err)
+				}
+			case 1: // Set
+				err := kv.Set([]byte(key), []byte("value"))
+				require.NoError(t, err)
+			case 2: // Delete
+				err := kv.Delete([]byte(key))
+				if err != nil {
+					require.Equal(t, kvstore.ErrKeyNotFound, err)
+				} else {
+					require.NoError(t, err)
+				}
+			}
+		}(i)
+	}
+
+	wg.Wait()
+}
+
+func TestKVStore_Concurrent_CloneAndEqual(t *testing.T) {
+	kv := kvstore.NewKVStore()
+	require.NoError(t, kv.Set([]byte("key1"), []byte("value1")))
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	var clonedKV kvstore.KVStore
+	go func() {
+		defer wg.Done()
+		clonedKV = kv.Clone()
+		equal, err := kv.Equal(clonedKV)
+		require.NoError(t, err)
+		require.True(t, equal)
+	}()
+
+	go func() {
+		defer wg.Done()
+		require.NoError(t, kv.Set([]byte("key2"), []byte("value2")))
+	}()
+
+	wg.Wait()
+}
+
+func TestKVStore_ConcurrentIteration(t *testing.T) {
+	kv := kvstore.NewKVStore()
+	for i := 0; i < 50; i++ {
+		key := fmt.Sprintf("key%d", i)
+		value := fmt.Sprintf("value%d", i)
+		require.NoError(t, kv.Set([]byte(key), []byte(value)))
+	}
+
+	var wg sync.WaitGroup
+	wg.Add(2)
+
+	iterateFunc := func() {
+		defer wg.Done()
+		err := kv.Iterate(nil, func(key kvstore.Key, value kvstore.Value) bool {
+			// Perform some read operation on key and value
+			return true
+		})
+		require.NoError(t, err)
+	}
+
+	go iterateFunc()
+	go iterateFunc()
+
+	wg.Wait()
+}
 
 func TestKVStore_Concurrent_Get(t *testing.T) {
 	// Create a new instance of the KVStore interface.
@@ -115,15 +256,14 @@ func TestKVStore_Concurrent_Overwrite(t *testing.T) {
 
 	// Start the goroutines.
 	for i := 0; i < len(entries); i++ {
-		j := i
 		st := rand.Intn(5)
-		sleepTimes[j] = st
+		sleepTimes[i] = st
 		wg.Add(1)
-		go func(j, st int) {
+		go func(i, st int) {
 			defer wg.Done()
 			time.Sleep(time.Duration(st) * time.Millisecond)
-			require.NoError(t, kv.Set(entries[j].key, entries[j].value))
-		}(j, st)
+			require.NoError(t, kv.Set(entries[i].key, entries[i].value))
+		}(i, st)
 	}
 
 	// Wait for all goroutines to finish.
