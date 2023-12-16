@@ -115,10 +115,9 @@ func TestKVStore_Concurrent_CloneAndEqual(t *testing.T) {
 	var wg sync.WaitGroup
 	wg.Add(2)
 
-	var clonedKV kvstore.KVStore
 	go func() {
 		defer wg.Done()
-		clonedKV = kv.Clone()
+		clonedKV := kv.Clone()
 		equal, err := kv.Equal(clonedKV)
 		require.NoError(t, err)
 		require.True(t, equal)
