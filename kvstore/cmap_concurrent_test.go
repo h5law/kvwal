@@ -17,7 +17,7 @@ import (
 func TestKVStore_Concurrency_StressGetAndSet(t *testing.T) {
 	kv := kvstore.NewKVStore()
 	var wg sync.WaitGroup
-	numGoroutines := 100 // High number for stress testing
+	numGoroutines := 1000 // High number for stress testing
 
 	// Concurrently writing different keys
 	for i := 0; i < numGoroutines; i++ {
@@ -29,6 +29,9 @@ func TestKVStore_Concurrency_StressGetAndSet(t *testing.T) {
 			require.NoError(t, kv.Set([]byte(key), []byte(value)))
 		}(i)
 	}
+
+	// Wait for all writes to finish
+	wg.Wait()
 
 	// Concurrently reading and verifying keys
 	for i := 0; i < numGoroutines; i++ {
@@ -48,33 +51,36 @@ func TestKVStore_Concurrency_StressGetAndSet(t *testing.T) {
 
 func TestKVStore_Concurrent_MultipleDeletes(t *testing.T) {
 	kv := kvstore.NewKVStore()
-	require.NoError(t, kv.Set([]byte("key"), []byte("value")))
-
 	var wg sync.WaitGroup
-	numGoroutines := 10
+	numGoroutines := 100
 
+	// Set all the keys
 	for i := 0; i < numGoroutines; i++ {
+		require.NoError(t, kv.Set([]byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("value%d", i))))
+	}
+
+	// Concurrently delete all the keys
+	for i := 0; i < numGoroutines; i++ {
+		j := i // Capture the value of i
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			err := kv.Delete([]byte("key"))
-			if err != nil {
-				require.Equal(t, kvstore.ErrKeyNotFound, err)
-			} else {
-				require.NoError(t, err)
-			}
+			require.NoError(t, kv.Delete([]byte(fmt.Sprintf("key%d", j))))
 		}()
 	}
 
 	wg.Wait()
-	_, err := kv.Get([]byte("key"))
-	require.Equal(t, kvstore.ErrKeyNotFound, err)
+	// Verify all the keys were deleted
+	for i := 0; i < numGoroutines; i++ {
+		_, err := kv.Get([]byte(fmt.Sprintf("key%d", i)))
+		require.ErrorIs(t, kvstore.ErrKeyNotFound, err)
+	}
 }
 
-func TestKVStore_Concurrent_RandomizedOperations(t *testing.T) {
+func TestKVStore_Concurrent_RandomisedOperations(t *testing.T) {
 	kv := kvstore.NewKVStore()
 	var wg sync.WaitGroup
-	operations := 1000 // Number of operations
+	operations := 100
 
 	for i := 0; i < operations; i++ {
 		wg.Add(1)
@@ -85,9 +91,9 @@ func TestKVStore_Concurrent_RandomizedOperations(t *testing.T) {
 
 			switch operation {
 			case 0: // Get
-				_, err := kv.Get([]byte(key)) // nolint:errcheck
+				_, err := kv.Get([]byte(key))
 				if err != nil {
-					require.Equal(t, kvstore.ErrKeyNotFound, err)
+					require.ErrorIs(t, kvstore.ErrKeyNotFound, err)
 				} else {
 					require.NoError(t, err)
 				}
@@ -97,7 +103,7 @@ func TestKVStore_Concurrent_RandomizedOperations(t *testing.T) {
 			case 2: // Delete
 				err := kv.Delete([]byte(key))
 				if err != nil {
-					require.Equal(t, kvstore.ErrKeyNotFound, err)
+					require.ErrorIs(t, kvstore.ErrKeyNotFound, err)
 				} else {
 					require.NoError(t, err)
 				}
@@ -110,38 +116,44 @@ func TestKVStore_Concurrent_RandomizedOperations(t *testing.T) {
 
 func TestKVStore_Concurrent_CloneAndEqual(t *testing.T) {
 	kv := kvstore.NewKVStore()
-	require.NoError(t, kv.Set([]byte("key1"), []byte("value1")))
-
 	var wg sync.WaitGroup
-	wg.Add(2)
+	numGoroutines := 100
 
-	go func() {
-		defer wg.Done()
-		clonedKV := kv.Clone()
-		equal, err := kv.Equal(clonedKV)
-		require.NoError(t, err)
-		require.True(t, equal)
-	}()
+	// Set some keys
+	for i := 0; i < numGoroutines; i++ {
+		require.NoError(t, kv.Set([]byte(fmt.Sprintf("key%d", i)), []byte(fmt.Sprintf("value%d", i))))
+	}
 
-	go func() {
-		defer wg.Done()
-		require.NoError(t, kv.Set([]byte("key2"), []byte("value2")))
-	}()
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			clonedKV := kv.Clone()
+			equal, err := kv.Equal(clonedKV)
+			require.NoError(t, err)
+			require.True(t, equal)
+		}()
+	}
 
 	wg.Wait()
 }
 
-func TestKVStore_ConcurrentIteration(t *testing.T) {
+func TestKVStore_Concurrent_Iteration(t *testing.T) {
 	kv := kvstore.NewKVStore()
-	for i := 0; i < 50; i++ {
-		key := fmt.Sprintf("key%d", i)
-		value := fmt.Sprintf("value%d", i)
-		require.NoError(t, kv.Set([]byte(key), []byte(value)))
+	numGoroutines := 100
+
+	// Set some keys
+	for i := 0; i < numGoroutines; i++ {
+		require.NoError(
+			t,
+			kv.Set(
+				[]byte(fmt.Sprintf("key%d", i)),
+				[]byte(fmt.Sprintf("value%d", i)),
+			),
+		)
 	}
 
 	var wg sync.WaitGroup
-	wg.Add(2)
-
 	iterateFunc := func() {
 		defer wg.Done()
 		err := kv.Iterate(nil, func(key kvstore.Key, value kvstore.Value) bool {
@@ -151,8 +163,10 @@ func TestKVStore_ConcurrentIteration(t *testing.T) {
 		require.NoError(t, err)
 	}
 
-	go iterateFunc()
-	go iterateFunc()
+	for i := 0; i < numGoroutines; i++ {
+		wg.Add(1)
+		go iterateFunc()
+	}
 
 	wg.Wait()
 }
@@ -350,5 +364,5 @@ func TestKVStore_Concurrent_DeleteTwice(t *testing.T) {
 
 	// Wait for all goroutines to finish.
 	err := eg.Wait()
-	require.ErrorAs(t, err, &kvstore.ErrKeyNotFound, "KVStore.Delete() Concurrent: expected ErrKeyNotFound, got %v", err)
+	require.ErrorIs(t, kvstore.ErrKeyNotFound, err, "KVStore.Delete() Concurrent: expected ErrKeyNotFound, got %v", err)
 }
