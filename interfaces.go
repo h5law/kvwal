@@ -1,4 +1,4 @@
-package kvstore
+package kvwal
 
 type (
 	// Key is a type alias for a byte slice representing a key in the store
@@ -7,7 +7,7 @@ type (
 	KeyPrefix []byte
 	// Value is a type alias for a byte slice representing a value in the store
 	Value []byte
-	// IterDirection is an alias for a single byte used to determined the
+	// IterDirection is an alias for a single byte used to determine the
 	// direction of iteration when iterating through the store
 	IterDirection byte
 )
