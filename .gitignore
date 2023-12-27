@@ -1,2 +1,5 @@
 # asdf local versions
 .tool-versions
+
+# Jetbrans IDE
+.idea/
