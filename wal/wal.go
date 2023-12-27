@@ -11,7 +11,7 @@ import (
 )
 
 // defaultBatchSize is the default number of entries to batch together before
-// writing to the log file, this can be changed by utilisig the WithBatchSize
+// writing to the log file, this can be changed by utilising the WithBatchSize
 // option, when creating a new WAL.
 const defaultBatchSize = 32
 
