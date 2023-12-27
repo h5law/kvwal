@@ -3,6 +3,7 @@ package kvstore_test
 import (
 	"bytes"
 	"fmt"
+	"github.com/h5law/kvwal"
 	"math/rand"
 	"sync"
 	"testing"
@@ -42,7 +43,7 @@ func TestKVStore_Concurrency_StressGetAndSet(t *testing.T) {
 			expectedValue := fmt.Sprintf("value%d", i)
 			value, err := kv.Get([]byte(key))
 			require.NoError(t, err)
-			require.Equal(t, kvstore.Value(expectedValue), value)
+			require.Equal(t, kvwal.Value(expectedValue), value)
 		}(i)
 	}
 
@@ -156,7 +157,7 @@ func TestKVStore_Concurrent_Iteration(t *testing.T) {
 	var wg sync.WaitGroup
 	iterateFunc := func() {
 		defer wg.Done()
-		err := kv.Iterate(nil, func(key kvstore.Key, value kvstore.Value) bool {
+		err := kv.Iterate(nil, func(key kvwal.Key, value kvwal.Value) bool {
 			// Perform some read operation on key and value
 			return true
 		})

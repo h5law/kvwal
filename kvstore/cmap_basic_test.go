@@ -7,20 +7,21 @@ import (
 
 	"github.com/stretchr/testify/require"
 
+	"github.com/h5law/kvwal"
 	"github.com/h5law/kvwal/kvstore"
 )
 
 type kvPairs struct {
-	key   kvstore.Key
-	value kvstore.Value
+	key   kvwal.Key
+	value kvwal.Value
 }
 
 func TestKVStore_Get(t *testing.T) {
 	tests := []struct {
 		desc          string
 		entries       []*kvPairs
-		key           kvstore.Key
-		expectedValue kvstore.Value
+		key           kvwal.Key
+		expectedValue kvwal.Value
 		expectedErr   error
 	}{
 		{
@@ -81,8 +82,8 @@ func TestKVStore_GetAll(t *testing.T) {
 	tests := []struct {
 		desc           string
 		entries        []*kvPairs
-		expectedKeys   []kvstore.Key
-		expectedValues []kvstore.Value
+		expectedKeys   []kvwal.Key
+		expectedValues []kvwal.Value
 		expectedLen    int
 	}{
 		{
@@ -93,15 +94,15 @@ func TestKVStore_GetAll(t *testing.T) {
 				{key: []byte("key3"), value: []byte("value3")},
 				{key: []byte("key4"), value: []byte("value4")},
 			},
-			expectedKeys:   []kvstore.Key{[]byte("key1"), []byte("key2"), []byte("key3"), []byte("key4")},
-			expectedValues: []kvstore.Value{[]byte("value1"), []byte("value2"), []byte("value3"), []byte("value4")},
+			expectedKeys:   []kvwal.Key{[]byte("key1"), []byte("key2"), []byte("key3"), []byte("key4")},
+			expectedValues: []kvwal.Value{[]byte("value1"), []byte("value2"), []byte("value3"), []byte("value4")},
 			expectedLen:    4,
 		},
 		{
 			desc:           "successful: get all keys and values from empty store",
 			entries:        []*kvPairs{},
-			expectedKeys:   []kvstore.Key{},
-			expectedValues: []kvstore.Value{},
+			expectedKeys:   []kvwal.Key{},
+			expectedValues: []kvwal.Value{},
 			expectedLen:    0,
 		},
 	}
@@ -116,12 +117,12 @@ func TestKVStore_GetAll(t *testing.T) {
 			require.Equalf(t, tt.expectedLen, len(gotKeys), "KVStore.GetAll(): got %s keys, want %s", len(gotKeys), tt.expectedLen)
 			require.Equalf(t, tt.expectedLen, len(gotValues), "KVStore.GetAll(): got %s values, want %s", len(gotValues), tt.expectedLen)
 			for i := range gotKeys {
-				require.Truef(t, slices.ContainsFunc(tt.expectedKeys, func(k kvstore.Key) bool {
+				require.Truef(t, slices.ContainsFunc(tt.expectedKeys, func(k kvwal.Key) bool {
 					return bytes.Equal(tt.expectedKeys[i], k)
 				}), "KVStore.GetAll(): got unexpected key %s", gotKeys[i])
 			}
 			for i := range gotValues {
-				require.Truef(t, slices.ContainsFunc(tt.expectedValues, func(v kvstore.Value) bool {
+				require.Truef(t, slices.ContainsFunc(tt.expectedValues, func(v kvwal.Value) bool {
 					return bytes.Equal(tt.expectedValues[i], v)
 				}), "KVStore.GetAll(): got unexpected value %s", gotValues[i])
 			}
@@ -133,8 +134,8 @@ func TestKVStore_GetPrefix(t *testing.T) {
 	tests := []struct {
 		desc           string
 		entries        []*kvPairs
-		prefix         kvstore.KeyPrefix
-		expectedValues []kvstore.Value
+		prefix         kvwal.KeyPrefix
+		expectedValues []kvwal.Value
 	}{
 		{
 			desc: "successful: get prefixed values",
@@ -145,7 +146,7 @@ func TestKVStore_GetPrefix(t *testing.T) {
 				{key: []byte("prefix/key4"), value: []byte("value4")},
 			},
 			prefix:         []byte("prefix/"),
-			expectedValues: []kvstore.Value{[]byte("value3"), []byte("value4")},
+			expectedValues: []kvwal.Value{[]byte("value3"), []byte("value4")},
 		},
 		{
 			desc: "successful: get all values if prefix is nil",
@@ -158,7 +159,7 @@ func TestKVStore_GetPrefix(t *testing.T) {
 				{key: []byte("key3"), value: []byte("value3")},
 			},
 			prefix: nil,
-			expectedValues: []kvstore.Value{
+			expectedValues: []kvwal.Value{
 				[]byte("prefix/value1"),
 				[]byte("prefix/value2"),
 				[]byte("prefix/value3"),
@@ -177,7 +178,7 @@ func TestKVStore_GetPrefix(t *testing.T) {
 			got := c.GetPrefix(tt.prefix)
 			require.Equalf(t, len(tt.expectedValues), len(got), "KVStore.GetPrefix(): got %d values, want %d", len(got), len(tt.expectedValues))
 			for i := range got {
-				require.Truef(t, slices.ContainsFunc(tt.expectedValues, func(v kvstore.Value) bool {
+				require.Truef(t, slices.ContainsFunc(tt.expectedValues, func(v kvwal.Value) bool {
 					return bytes.Equal(tt.expectedValues[i], v)
 				}), "KVStore.GetPrefix(): got %s, want %s", got[i], tt.expectedValues)
 			}
@@ -189,7 +190,7 @@ func TestKVStore_Has(t *testing.T) {
 	tests := []struct {
 		desc        string
 		entries     []*kvPairs
-		key         kvstore.Key
+		key         kvwal.Key
 		expectedHas bool
 		expectedErr error
 	}{
@@ -314,7 +315,7 @@ func TestKVStore_Delete(t *testing.T) {
 	tests := []struct {
 		desc        string
 		entries     []*kvPairs
-		key         kvstore.Key
+		key         kvwal.Key
 		expectedLen int
 		expectedErr error
 	}{
@@ -379,7 +380,7 @@ func TestKVStore_DeletePrefix(t *testing.T) {
 	tests := []struct {
 		desc        string
 		entries     []*kvPairs
-		prefix      kvstore.KeyPrefix
+		prefix      kvwal.KeyPrefix
 		expectedLen int
 	}{
 		{
@@ -455,7 +456,7 @@ func TestKVStore_Iterate(t *testing.T) {
 	// consumerFn is a function that appends the key-value pair to the consumedList
 	// if the key or value doesn't end with 3. Once it encounters a key or value
 	// that ends with 3, it returns false to stop the iteration.
-	consumerFn := func(key kvstore.Key, value kvstore.Value) bool {
+	consumerFn := func(key kvwal.Key, value kvwal.Value) bool {
 		if bytes.HasSuffix(key, []byte("3")) || bytes.HasSuffix(value, []byte("3")) {
 			return false
 		}
@@ -465,8 +466,8 @@ func TestKVStore_Iterate(t *testing.T) {
 	tests := []struct {
 		desc                 string
 		entries              []*kvPairs
-		prefix               kvstore.KeyPrefix
-		iterDirection        []kvstore.IterDirection
+		prefix               kvwal.KeyPrefix
+		iterDirection        []kvwal.IterDirection
 		expectedConsumedLen  int
 		expectedConsumedList []*kvPairs
 		expectedErr          error
@@ -482,7 +483,7 @@ func TestKVStore_Iterate(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:              []byte("prefix/"),
-			iterDirection:       []kvstore.IterDirection{kvstore.IterDirectionForward},
+			iterDirection:       []kvwal.IterDirection{kvwal.IterDirectionForward},
 			expectedConsumedLen: 2,
 			expectedConsumedList: []*kvPairs{
 				{[]byte("prefix/key1"), []byte("value1")},
@@ -501,7 +502,7 @@ func TestKVStore_Iterate(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:              nil,
-			iterDirection:       []kvstore.IterDirection{kvstore.IterDirectionForward},
+			iterDirection:       []kvwal.IterDirection{kvwal.IterDirectionForward},
 			expectedConsumedLen: 2,
 			expectedConsumedList: []*kvPairs{
 				{[]byte("key1"), []byte("value1")},
@@ -520,7 +521,7 @@ func TestKVStore_Iterate(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:               []byte("prefix/"),
-			iterDirection:        []kvstore.IterDirection{kvstore.IterDirectionReverse},
+			iterDirection:        []kvwal.IterDirection{kvwal.IterDirectionReverse},
 			expectedConsumedLen:  0, // 0 because the first key-value in reverse ends with 3
 			expectedConsumedList: []*kvPairs{},
 			expectedErr:          nil,
@@ -536,7 +537,7 @@ func TestKVStore_Iterate(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:               nil,
-			iterDirection:        []kvstore.IterDirection{kvstore.IterDirectionReverse},
+			iterDirection:        []kvwal.IterDirection{kvwal.IterDirectionReverse},
 			expectedConsumedLen:  0, // 0 because the first key-value in reverse ends with 3
 			expectedConsumedList: []*kvPairs{},
 			expectedErr:          nil,
@@ -552,7 +553,7 @@ func TestKVStore_Iterate(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:               []byte("prefix/"),
-			iterDirection:        []kvstore.IterDirection{kvstore.IterDirection(3)},
+			iterDirection:        []kvwal.IterDirection{kvwal.IterDirection(3)},
 			expectedConsumedLen:  0,
 			expectedConsumedList: []*kvPairs{},
 			expectedErr:          kvstore.ErrUnknownIterDirection,
@@ -568,9 +569,9 @@ func TestKVStore_Iterate(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix: []byte("prefix/"),
-			iterDirection: []kvstore.IterDirection{
-				kvstore.IterDirectionReverse,
-				kvstore.IterDirectionReverse,
+			iterDirection: []kvwal.IterDirection{
+				kvwal.IterDirectionReverse,
+				kvwal.IterDirectionReverse,
 			},
 			expectedConsumedLen:  0,
 			expectedConsumedList: []*kvPairs{},
@@ -614,11 +615,11 @@ func TestKVStore_Iterate(t *testing.T) {
 }
 
 func TestKVStore_IterateKeys(t *testing.T) {
-	consumedList := make([]kvstore.Key, 0)
+	consumedList := make([]kvwal.Key, 0)
 	// consumerFn is a function that appends the key to the consumedList if
 	// the key doesn't end with 3. Once it encounters a key that ends with 3,
 	// it returns false to stop the iteration.
-	consumerFn := func(key kvstore.Key) bool {
+	consumerFn := func(key kvwal.Key) bool {
 		if bytes.HasSuffix(key, []byte("3")) {
 			return false
 		}
@@ -628,10 +629,10 @@ func TestKVStore_IterateKeys(t *testing.T) {
 	tests := []struct {
 		desc                 string
 		entries              []*kvPairs
-		prefix               kvstore.KeyPrefix
-		iterDirection        []kvstore.IterDirection
+		prefix               kvwal.KeyPrefix
+		iterDirection        []kvwal.IterDirection
 		expectedConsumedLen  int
-		expectedConsumedList []kvstore.Key
+		expectedConsumedList []kvwal.Key
 		expectedErr          error
 	}{
 		{
@@ -645,11 +646,11 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:              []byte("prefix/"),
-			iterDirection:       []kvstore.IterDirection{kvstore.IterDirectionForward},
+			iterDirection:       []kvwal.IterDirection{kvwal.IterDirectionForward},
 			expectedConsumedLen: 2,
-			expectedConsumedList: []kvstore.Key{
-				kvstore.Key([]byte("prefix/key1")),
-				kvstore.Key([]byte("prefix/key2")),
+			expectedConsumedList: []kvwal.Key{
+				kvwal.Key([]byte("prefix/key1")),
+				kvwal.Key([]byte("prefix/key2")),
 			},
 			expectedErr: nil,
 		},
@@ -664,11 +665,11 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:              nil,
-			iterDirection:       []kvstore.IterDirection{kvstore.IterDirectionForward},
+			iterDirection:       []kvwal.IterDirection{kvwal.IterDirectionForward},
 			expectedConsumedLen: 2,
-			expectedConsumedList: []kvstore.Key{
-				kvstore.Key([]byte("key1")),
-				kvstore.Key([]byte("key2")),
+			expectedConsumedList: []kvwal.Key{
+				kvwal.Key([]byte("key1")),
+				kvwal.Key([]byte("key2")),
 			},
 			expectedErr: nil,
 		},
@@ -683,9 +684,9 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:               []byte("prefix/"),
-			iterDirection:        []kvstore.IterDirection{kvstore.IterDirectionReverse},
+			iterDirection:        []kvwal.IterDirection{kvwal.IterDirectionReverse},
 			expectedConsumedLen:  0, // 0 because the first key-value in reverse ends with 3
-			expectedConsumedList: []kvstore.Key{},
+			expectedConsumedList: []kvwal.Key{},
 			expectedErr:          nil,
 		},
 		{
@@ -699,9 +700,9 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:               nil,
-			iterDirection:        []kvstore.IterDirection{kvstore.IterDirectionReverse},
+			iterDirection:        []kvwal.IterDirection{kvwal.IterDirectionReverse},
 			expectedConsumedLen:  0, // 0 because the first key-value in reverse ends with 3
-			expectedConsumedList: []kvstore.Key{},
+			expectedConsumedList: []kvwal.Key{},
 			expectedErr:          nil,
 		},
 		{
@@ -715,9 +716,9 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix:               []byte("prefix/"),
-			iterDirection:        []kvstore.IterDirection{kvstore.IterDirection(3)},
+			iterDirection:        []kvwal.IterDirection{kvwal.IterDirection(3)},
 			expectedConsumedLen:  0,
-			expectedConsumedList: []kvstore.Key{},
+			expectedConsumedList: []kvwal.Key{},
 			expectedErr:          kvstore.ErrUnknownIterDirection,
 		},
 		{
@@ -731,17 +732,17 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				{[]byte("key3"), []byte("value3")},
 			},
 			prefix: []byte("prefix/"),
-			iterDirection: []kvstore.IterDirection{
-				kvstore.IterDirectionReverse,
-				kvstore.IterDirectionReverse,
+			iterDirection: []kvwal.IterDirection{
+				kvwal.IterDirectionReverse,
+				kvwal.IterDirectionReverse,
 			},
 			expectedConsumedLen:  0,
-			expectedConsumedList: []kvstore.Key{},
+			expectedConsumedList: []kvwal.Key{},
 			expectedErr:          kvstore.ErrInvalidIterDirections,
 		},
 	}
 	for _, tt := range tests {
-		consumedList = make([]kvstore.Key, 0)
+		consumedList = make([]kvwal.Key, 0)
 		t.Run(tt.desc, func(t *testing.T) {
 			c := kvstore.NewKVStore()
 			for _, entry := range tt.entries {
@@ -762,7 +763,7 @@ func TestKVStore_IterateKeys(t *testing.T) {
 				len(consumedList),
 			)
 			for i := range consumedList {
-				require.Truef(t, slices.ContainsFunc(consumedList, func(k kvstore.Key) bool {
+				require.Truef(t, slices.ContainsFunc(consumedList, func(k kvwal.Key) bool {
 					return bytes.Equal(tt.expectedConsumedList[i], k)
 				}), "KVStore.IterateKeys(): got unexpected key %s", consumedList[i])
 			}
