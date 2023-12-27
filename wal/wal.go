@@ -19,12 +19,15 @@ const defaultBatchSize = 32
 
 var _ kvwal.WAL = (*Logger)(nil)
 
+// Logger is an implementation of the WAL interface and handles writes to the
+// configured log file in batches, which can be configured using the WalOption
+// functions during construction.
 type Logger struct {
-	errGroup    *errgroup.Group
-	logPath     string
-	batchSize   int
-	entryClosed atomic.Bool
-	entryChan   chan kvwal.Entry
+	errGroup        *errgroup.Group
+	logPath         string
+	batchSize       int
+	entryChanClosed atomic.Bool
+	entryChan       chan kvwal.Entry
 }
 
 // NewWriteAheadLogger creates a new Write Ahead Logger with the given options.
@@ -60,7 +63,7 @@ func (w *Logger) Start(ctx context.Context) error {
 // Write sends the given entry to the entry channel, to be written to the log
 // file, once the batch size is reached.
 func (w *Logger) Write(entry kvwal.Entry) error {
-	if w.entryClosed.Load() {
+	if w.entryChanClosed.Load() {
 		return errors.Join(ErrWALWritingEntry, errors.New("entry channel closed"))
 	}
 	w.entryChan <- entry
@@ -74,9 +77,9 @@ func (w *Logger) Close() error {
 	// will be sent, once this channel is closed all pending batch entries will
 	// be written to the log file.
 	close(w.entryChan)
-	// Set the entryClosed flag to true, so that any subsequent calls to Write
+	// Set the entryChanClosed flag to true, so that any subsequent calls to Write
 	// will return an error.
-	w.entryClosed.CompareAndSwap(false, true)
+	w.entryChanClosed.CompareAndSwap(false, true)
 	// Wait for the all goroutines to finish, returning any errors.
 	return w.errGroup.Wait()
 }
@@ -107,8 +110,8 @@ func (w *Logger) goWriteBatch(ctx context.Context, logFile *os.File) error {
 		select {
 		case entry, ok := <-w.entryChan:
 			if !ok {
-				// Ensure the entryClosed flag to true
-				w.entryClosed.CompareAndSwap(false, true)
+				// Ensure the entryChanClosed flag to true
+				w.entryChanClosed.CompareAndSwap(false, true)
 				// If the entry channel is closed, flush any remaining entries
 				// to the log file and return.
 				return w.writeBatchToFile(logFile, batch)
